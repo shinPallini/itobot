@@ -1,5 +1,3 @@
-# bot-template
+# itobot
 
-Discord Botを作成するためのコードをまとめたものです。
-
-使用している言語はGoです。
+Discord Botを使ってボードゲーム「ito」を遊べるサービスです。
