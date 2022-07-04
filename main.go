@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
@@ -12,12 +13,38 @@ import (
 
 var s *discordgo.Session
 
+type UserNumberMap struct {
+	mu        sync.Mutex
+	numberMap map[string]int
+}
+
+func (u *UserNumberMap) SetUnique(username string, i int) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	if len(u.numberMap) == 0 {
+		u.numberMap[username] = i
+		return
+	}
+
+	for _, v := range u.numberMap {
+		if i == v {
+			n := Random()
+			u.SetUnique(username, n)
+		} else {
+			u.numberMap[username] = i
+		}
+	}
+}
+
 var (
-	GuildID   string
-	BotToken  string
-	Msg       *discordgo.Message
-	msgerr    error
-	numberMap = make(map[string]int)
+	GuildID       string
+	BotToken      string
+	Msg           *discordgo.Message
+	msgerr        error
+	userNumberMap = &UserNumberMap{
+		numberMap: make(map[string]int),
+	}
 )
 
 func init() {
@@ -81,14 +108,14 @@ func main() {
 					Content: fmt.Sprintf("Random Number: %d", num),
 				},
 			})
-			numberMap[s.State.User.String()] = num
+			userNumberMap.SetUnique(s.State.User.Username, num)
 		},
 		"get": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Flags:   uint64(discordgo.MessageFlagsEphemeral),
-					Content: fmt.Sprintf("Get numberMap: %v", numberMap),
+					Content: fmt.Sprintf("Get numberMap: %v", userNumberMap.numberMap),
 				},
 			})
 		},
