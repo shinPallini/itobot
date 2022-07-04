@@ -14,6 +14,8 @@ var s *discordgo.Session
 var (
 	GuildID  string
 	BotToken string
+	Msg      *discordgo.Message
+	msgerr   error
 )
 
 func init() {
@@ -40,14 +42,33 @@ func main() {
 
 	commandHandlers := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"command": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			//s.ChannelMessageSend()
-			// s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-			// 	Type: discordgo.InteractionResponseChannelMessageWithSource,
-			// 	Data: &discordgo.InteractionResponseData{
-			// 		Content: i.ChannelID,
-			// 	},
-			// })
-			s.ChannelMessageSend(i.ChannelID, "Use ChannelMessageSend")
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Flags:   uint64(discordgo.MessageFlagsEphemeral),
+					Content: "Content Ephemeral",
+				},
+			})
+
+			Msg, msgerr = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				Content: "Followup message has been created",
+			})
+			if msgerr != nil {
+				log.Fatal(msgerr)
+			}
+		},
+		"edit": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Flags:   uint64(discordgo.MessageFlagsEphemeral),
+					Content: "Content Edited",
+				},
+			})
+
+			Msg, msgerr = s.FollowupMessageEdit(i.Interaction, Msg.ID, &discordgo.WebhookEdit{
+				Content: "Edited followup message!",
+			})
 		},
 	}
 
@@ -60,6 +81,10 @@ func main() {
 	_, err = s.ApplicationCommandCreate(s.State.User.ID, GuildID, &discordgo.ApplicationCommand{
 		Name:        "command",
 		Description: "sample command",
+	})
+	_, err = s.ApplicationCommandCreate(s.State.User.ID, GuildID, &discordgo.ApplicationCommand{
+		Name:        "edit",
+		Description: "Edit message",
 	})
 
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
