@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -12,10 +13,11 @@ import (
 var s *discordgo.Session
 
 var (
-	GuildID  string
-	BotToken string
-	Msg      *discordgo.Message
-	msgerr   error
+	GuildID   string
+	BotToken  string
+	Msg       *discordgo.Message
+	msgerr    error
+	numberMap = make(map[string]int)
 )
 
 func init() {
@@ -70,6 +72,26 @@ func main() {
 				Content: "Edited followup message!",
 			})
 		},
+		"random": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			num := Random()
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Flags:   uint64(discordgo.MessageFlagsEphemeral),
+					Content: fmt.Sprintf("Random Number: %d", num),
+				},
+			})
+			numberMap[s.State.User.String()] = num
+		},
+		"get": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Flags:   uint64(discordgo.MessageFlagsEphemeral),
+					Content: fmt.Sprintf("Get numberMap: %v", numberMap),
+				},
+			})
+		},
 	}
 
 	err := s.Open()
@@ -85,6 +107,15 @@ func main() {
 	_, err = s.ApplicationCommandCreate(s.State.User.ID, GuildID, &discordgo.ApplicationCommand{
 		Name:        "edit",
 		Description: "Edit message",
+	})
+
+	_, err = s.ApplicationCommandCreate(s.State.User.ID, GuildID, &discordgo.ApplicationCommand{
+		Name:        "random",
+		Description: "Random number message",
+	})
+	_, err = s.ApplicationCommandCreate(s.State.User.ID, GuildID, &discordgo.ApplicationCommand{
+		Name:        "get",
+		Description: "Get numberMap",
 	})
 
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
