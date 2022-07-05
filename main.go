@@ -81,7 +81,7 @@ func main() {
 			msgSend := discordgo.MessageSend{
 				Content: "Message Send Compolex",
 				Embeds: []*discordgo.MessageEmbed{
-					&discordgo.MessageEmbed{
+					{
 						Title:       "Embed title1",
 						Description: "Description1",
 					},
