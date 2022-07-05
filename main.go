@@ -78,10 +78,16 @@ func main() {
 					Content: "Content Ephemeral",
 				},
 			})
-
-			Msg, msgerr = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Content: "Followup message has been created",
-			})
+			msgSend := discordgo.MessageSend{
+				Content: "Message Send Compolex",
+				Embeds: []*discordgo.MessageEmbed{
+					&discordgo.MessageEmbed{
+						Title:       "Embed title1",
+						Description: "Description1",
+					},
+				},
+			}
+			Msg, msgerr = s.ChannelMessageSendComplex(i.ChannelID, &msgSend)
 			if msgerr != nil {
 				log.Fatal(msgerr)
 			}
@@ -95,9 +101,21 @@ func main() {
 				},
 			})
 
-			Msg, msgerr = s.FollowupMessageEdit(i.Interaction, Msg.ID, &discordgo.WebhookEdit{
-				Content: "Edited followup message!",
+			msgEdit := discordgo.NewMessageEdit(i.ChannelID, Msg.ID)
+			msgEdit.SetContent("Edited content!!!!!!!")
+			msgEdit.SetEmbed(&discordgo.MessageEmbed{
+				Title:       "Edited Title1",
+				Description: "Edited Description1",
+				Fields: []*discordgo.MessageEmbedField{
+					{
+						Name:  "Field1",
+						Value: "Value1",
+					},
+				},
 			})
+
+			Msg, msgerr = s.ChannelMessageEditComplex(msgEdit)
+
 		},
 		"random": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			num := Random()
