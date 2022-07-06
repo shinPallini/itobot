@@ -13,38 +13,42 @@ import (
 
 var s *discordgo.Session
 
-type UserNumberMap struct {
-	mu        sync.Mutex
-	numberMap map[string]int
+type UsersInfo struct {
+	mu         sync.Mutex
+	userNumber map[string]int
 }
 
-func (u *UserNumberMap) SetUnique(username string, i int) {
+func NewUsersInfo() *UsersInfo {
+	return &UsersInfo{
+		userNumber: make(map[string]int),
+	}
+}
+
+func (u *UsersInfo) SetUnique(username string, i int) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 
-	if len(u.numberMap) == 0 {
-		u.numberMap[username] = i
+	if len(u.userNumber) == 0 {
+		u.userNumber[username] = i
 		return
 	}
 
-	for _, v := range u.numberMap {
+	for _, v := range u.userNumber {
 		if i == v {
 			n := Random()
 			u.SetUnique(username, n)
 		} else {
-			u.numberMap[username] = i
+			u.userNumber[username] = i
 		}
 	}
 }
 
 var (
-	GuildID       string
-	BotToken      string
-	Msg           *discordgo.Message
-	msgerr        error
-	userNumberMap = &UserNumberMap{
-		numberMap: make(map[string]int),
-	}
+	GuildID   string
+	BotToken  string
+	Msg       *discordgo.Message
+	msgerr    error
+	usersInfo = NewUsersInfo()
 )
 
 func init() {
@@ -126,14 +130,23 @@ func main() {
 					Content: fmt.Sprintf("Random Number: %d", num),
 				},
 			})
-			userNumberMap.SetUnique(s.State.User.Username, num)
+			usersInfo.SetUnique(s.State.User.Username, num)
 		},
 		"get": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Flags:   uint64(discordgo.MessageFlagsEphemeral),
-					Content: fmt.Sprintf("Get numberMap: %v", userNumberMap.numberMap),
+					Content: fmt.Sprintf("Get numberMap: %v", usersInfo.userNumber),
+				},
+			})
+		},
+		"ito": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Flags:   uint64(discordgo.MessageFlagsEphemeral),
+					Content: "ito start!",
 				},
 			})
 		},
@@ -160,7 +173,19 @@ func main() {
 	})
 	_, err = s.ApplicationCommandCreate(s.State.User.ID, GuildID, &discordgo.ApplicationCommand{
 		Name:        "get",
-		Description: "Get numberMap",
+		Description: "Get users info",
+	})
+
+	_, err = s.ApplicationCommandCreate(s.State.User.ID, GuildID, &discordgo.ApplicationCommand{
+		Name:        "ito",
+		Description: "Itoのゲーム開始やヘルプに関連するコマンドです",
+		Options: []*discordgo.ApplicationCommandOption{
+			{
+				Name:        "start",
+				Description: "Itoのゲームを開始するコマンド",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			},
+		},
 	})
 
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
