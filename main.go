@@ -142,13 +142,65 @@ func main() {
 			})
 		},
 		"ito": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			options := i.ApplicationCommandData().Options
+			var (
+				content    string
+				components []discordgo.MessageComponent
+			)
+			switch options[0].Name {
+			case "start":
+				components = append(components, discordgo.ActionsRow{
+					Components: []discordgo.MessageComponent{
+						discordgo.Button{
+							Label: "ランダムな数字を抽選!",
+							Style: discordgo.PrimaryButton,
+							Emoji: discordgo.ComponentEmoji{
+								Name: "🎲",
+							},
+							CustomID: "random_button",
+						},
+					},
+				})
+				embeds := []*discordgo.MessageEmbed{
+					{
+						Title:       "Ito",
+						Description: "ボードゲームのItoを遊べるBotです。\nボタンをクリックしてランダムな数字をGetしよう！",
+						Color:       0xF7F7F7,
+						Timestamp:   "2017-10-31T12:00:00.000Z",
+					},
+				}
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Embeds:     embeds,
+						Components: components,
+					},
+				})
+			case "help":
+				content = "Ito help!"
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Flags:   uint64(discordgo.MessageFlagsEphemeral),
+						Content: content,
+					},
+				})
+			}
+		},
+	}
+
+	componentHandler := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+		"random_button": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			num := Random()
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Flags:   uint64(discordgo.MessageFlagsEphemeral),
-					Content: "ito start!",
+					Content: fmt.Sprintf("Random Number: %d", num),
 				},
 			})
+			member := i.Member.User.Username
+			usersInfo.SetUnique(member, num)
 		},
 	}
 
@@ -182,7 +234,12 @@ func main() {
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Name:        "start",
-				Description: "Itoのゲームを開始するコマンド",
+				Description: "Itoのゲームを開始するコマンドです",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			},
+			{
+				Name:        "help",
+				Description: "Ito Botの操作方法を確認するコマンドです",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
@@ -192,6 +249,10 @@ func main() {
 		switch i.Type {
 		case discordgo.InteractionApplicationCommand:
 			if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
+				h(s, i)
+			}
+		case discordgo.InteractionMessageComponent:
+			if h, ok := componentHandler[i.MessageComponentData().CustomID]; ok {
 				h(s, i)
 			}
 		}
