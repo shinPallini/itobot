@@ -103,55 +103,69 @@ var (
 	msgerr   error
 
 	channelUserMap = make(map[string]*UsersInfo)
+	NumberEmojis   = map[int]string{
+		1: ":one:",
+		2: ":two:",
+		3: ":three",
+		4: ":four:",
+		5: ":five:",
+		6: ":six:",
+		7: ":seven:",
+		8: ":eight:",
+	}
+	footer = &discordgo.MessageEmbedFooter{
+		Text:    "made by shin pallini.",
+		IconURL: "https://pbs.twimg.com/profile_images/1319857864899395584/HvHVUJh3_400x400.jpg",
+	}
 
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"command": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Flags:   uint64(discordgo.MessageFlagsEphemeral),
-					Content: "Content Ephemeral",
-				},
-			})
-			msgSend := discordgo.MessageSend{
-				Content: "Message Send Compolex",
-				Embeds: []*discordgo.MessageEmbed{
-					{
-						Title:       "Embed title1",
-						Description: "Description1",
-					},
-				},
-			}
-			Msg, msgerr = s.ChannelMessageSendComplex(i.ChannelID, &msgSend)
-			if msgerr != nil {
-				log.Fatal(msgerr)
-			}
-		},
-		"edit": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Flags:   uint64(discordgo.MessageFlagsEphemeral),
-					Content: "Content Edited",
-				},
-			})
+		// "command": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		// 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		// 		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		// 		Data: &discordgo.InteractionResponseData{
+		// 			Flags:   uint64(discordgo.MessageFlagsEphemeral),
+		// 			Content: "Content Ephemeral",
+		// 		},
+		// 	})
+		// 	msgSend := discordgo.MessageSend{
+		// 		Content: "Message Send Compolex",
+		// 		Embeds: []*discordgo.MessageEmbed{
+		// 			{
+		// 				Title:       "Embed title1",
+		// 				Description: "Description1",
+		// 			},
+		// 		},
+		// 	}
+		// 	Msg, msgerr = s.ChannelMessageSendComplex(i.ChannelID, &msgSend)
+		// 	if msgerr != nil {
+		// 		log.Fatal(msgerr)
+		// 	}
+		// },
+		// "edit": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		// 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		// 		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		// 		Data: &discordgo.InteractionResponseData{
+		// 			Flags:   uint64(discordgo.MessageFlagsEphemeral),
+		// 			Content: "Content Edited",
+		// 		},
+		// 	})
 
-			msgEdit := discordgo.NewMessageEdit(i.ChannelID, Msg.ID)
-			msgEdit.SetContent("Edited content!!!!!!!")
-			msgEdit.SetEmbed(&discordgo.MessageEmbed{
-				Title:       "Edited Title1",
-				Description: "Edited Description1",
-				Fields: []*discordgo.MessageEmbedField{
-					{
-						Name:  "Field1",
-						Value: "Value1",
-					},
-				},
-			})
+		// 	msgEdit := discordgo.NewMessageEdit(i.ChannelID, Msg.ID)
+		// 	msgEdit.SetContent("Edited content!!!!!!!")
+		// 	msgEdit.SetEmbed(&discordgo.MessageEmbed{
+		// 		Title:       "Edited Title1",
+		// 		Description: "Edited Description1",
+		// 		Fields: []*discordgo.MessageEmbedField{
+		// 			{
+		// 				Name:  "Field1",
+		// 				Value: "Value1",
+		// 			},
+		// 		},
+		// 	})
 
-			Msg, msgerr = s.ChannelMessageEditComplex(msgEdit)
+		// 	Msg, msgerr = s.ChannelMessageEditComplex(msgEdit)
 
-		},
+		// },
 		"random": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			num := Random(NumberMax)
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -207,6 +221,15 @@ var (
 						Description: "ボードゲームのItoを遊べるBotです。\nボタンをクリックしてランダムな数字をGetしよう！",
 						Color:       0xF7F7F7,
 						Timestamp:   GetNow(),
+						Thumbnail: &discordgo.MessageEmbedThumbnail{
+							URL: "https://m.media-amazon.com/images/I/71lTZzCnvRL._AC_SY355_.jpg",
+						},
+						Footer: footer,
+						Author: &discordgo.MessageEmbedAuthor{
+							Name:    s.State.User.Username,
+							URL:     "https://twitter.com/shin_0205",
+							IconURL: "https://better-default-discord.netlify.app/Icons/Gradient-Green.png",
+						},
 					},
 				}
 				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -262,7 +285,7 @@ var (
 
 						for count, k := range keys {
 							l = append(l, &discordgo.MessageEmbedField{
-								Name:   fmt.Sprintf("%d位: %sさん", count+1, k),
+								Name:   fmt.Sprintf("%s位: %sさん", NumberEmojis[count+1], k),
 								Value:  strconv.Itoa(channelUserMap[i.ChannelID].userNumber[k]),
 								Inline: false,
 							})
@@ -270,6 +293,12 @@ var (
 
 						return l
 					}(),
+					Footer: footer,
+					Author: &discordgo.MessageEmbedAuthor{
+						Name:    s.State.User.Username,
+						URL:     "https://twitter.com/shin_0205",
+						IconURL: "https://better-default-discord.netlify.app/Icons/Gradient-Green.png",
+					},
 				},
 			}
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -316,14 +345,14 @@ func main() {
 	}
 	defer s.Close()
 
-	_, err = s.ApplicationCommandCreate(s.State.User.ID, GuildID, &discordgo.ApplicationCommand{
-		Name:        "command",
-		Description: "sample command",
-	})
-	_, err = s.ApplicationCommandCreate(s.State.User.ID, GuildID, &discordgo.ApplicationCommand{
-		Name:        "edit",
-		Description: "Edit message",
-	})
+	// _, err = s.ApplicationCommandCreate(s.State.User.ID, GuildID, &discordgo.ApplicationCommand{
+	// 	Name:        "command",
+	// 	Description: "sample command",
+	// })
+	// _, err = s.ApplicationCommandCreate(s.State.User.ID, GuildID, &discordgo.ApplicationCommand{
+	// 	Name:        "edit",
+	// 	Description: "Edit message",
+	// })
 
 	_, err = s.ApplicationCommandCreate(s.State.User.ID, GuildID, &discordgo.ApplicationCommand{
 		Name:        "random",
