@@ -44,36 +44,14 @@ func (u *UsersInfo) SetUnique(username string, i int) {
 }
 
 var (
-	GuildID   string
-	BotToken  string
-	Msg       *discordgo.Message
-	msgerr    error
-	usersInfo = NewUsersInfo()
-)
+	GuildID  string
+	BotToken string
+	Msg      *discordgo.Message
+	msgerr   error
 
-func init() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-	GuildID = os.Getenv("GUILDID")
-	BotToken = os.Getenv("BOTTOKEN")
-}
+	channelUserMap = make(map[string]*UsersInfo)
 
-func init() {
-	var err error
-	s, err = discordgo.New("Bot " + BotToken)
-	if err != nil {
-		log.Fatalf("Invalid bot parameters: %v", err)
-	}
-}
-
-func main() {
-	s.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Printf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
-	})
-
-	commandHandlers := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"command": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -130,14 +108,14 @@ func main() {
 					Content: fmt.Sprintf("Random Number: %d", num),
 				},
 			})
-			usersInfo.SetUnique(s.State.User.Username, num)
+			channelUserMap[i.ChannelID].SetUnique(s.State.User.Username, num)
 		},
 		"get": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Flags:   uint64(discordgo.MessageFlagsEphemeral),
-					Content: fmt.Sprintf("Get numberMap: %v", usersInfo.userNumber),
+					Content: fmt.Sprintf("Get numberMap: %v", channelUserMap[i.ChannelID].userNumber),
 				},
 			})
 		},
@@ -149,6 +127,7 @@ func main() {
 			)
 			switch options[0].Name {
 			case "start":
+				channelUserMap[i.ChannelID] = NewUsersInfo()
 				components = append(components, discordgo.ActionsRow{
 					Components: []discordgo.MessageComponent{
 						discordgo.Button{
@@ -189,7 +168,7 @@ func main() {
 		},
 	}
 
-	componentHandler := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+	componentHandler = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"random_button": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			num := Random()
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -200,9 +179,38 @@ func main() {
 				},
 			})
 			member := i.Member.User.Username
-			usersInfo.SetUnique(member, num)
+			channelUserMap[i.ChannelID].SetUnique(member, num)
 		},
 	}
+)
+
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("Error loading .env file")
+	}
+	GuildID = os.Getenv("GUILDID")
+	BotToken = os.Getenv("BOTTOKEN")
+	if GuildID == "" {
+		log.Fatal("Cannot connect discord bot. Set environment variable [GuildID].")
+	}
+	if BotToken == "" {
+		log.Fatal("Cannot connect discord bot. Set environment variable [BotToken].")
+	}
+}
+
+func init() {
+	var err error
+	s, err = discordgo.New("Bot " + BotToken)
+	if err != nil {
+		log.Fatalf("Invalid bot parameters: %v", err)
+	}
+}
+
+func main() {
+	s.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
+		log.Printf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
+	})
 
 	err := s.Open()
 	if err != nil {
