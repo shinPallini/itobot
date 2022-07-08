@@ -190,32 +190,29 @@ var (
 			options := i.ApplicationCommandData().Options
 			var (
 				content    string
-				components []discordgo.MessageComponent
-			)
-			switch options[0].Name {
-			case "start":
-				channelUserMap[i.ChannelID] = NewUsersInfo()
-				components = append(components, discordgo.ActionsRow{
-					Components: []discordgo.MessageComponent{
-						discordgo.Button{
-							Label: "ランダムな数字を抽選!",
-							Style: discordgo.PrimaryButton,
-							Emoji: discordgo.ComponentEmoji{
-								Name: "🎲",
+				components = []discordgo.MessageComponent{
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label: "ランダムな数字を抽選!",
+								Style: discordgo.PrimaryButton,
+								Emoji: discordgo.ComponentEmoji{
+									Name: "🎲",
+								},
+								CustomID: "random_button",
 							},
-							CustomID: "random_button",
-						},
-						discordgo.Button{
-							Label: "結果発表！",
-							Style: discordgo.SuccessButton,
-							Emoji: discordgo.ComponentEmoji{
-								Name: "🎯",
+							discordgo.Button{
+								Label: "結果発表！",
+								Style: discordgo.SuccessButton,
+								Emoji: discordgo.ComponentEmoji{
+									Name: "🎯",
+								},
+								CustomID: "answer_button",
 							},
-							CustomID: "answer_button",
 						},
 					},
-				})
-				embeds := []*discordgo.MessageEmbed{
+				}
+				embeds = []*discordgo.MessageEmbed{
 					{
 						Title:       "Ito",
 						Description: "ボードゲームのItoを遊べるBotです。\nボタンをクリックしてランダムな数字をGetしよう！",
@@ -232,6 +229,10 @@ var (
 						},
 					},
 				}
+			)
+			switch options[0].Name {
+			case "start":
+				channelUserMap[i.ChannelID] = NewUsersInfo()
 				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
