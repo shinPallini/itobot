@@ -17,6 +17,9 @@ var s *discordgo.Session
 
 const (
 	NumberMax int = 100
+
+	RandomButton = "random_button"
+	AnswerButton = "answer_button"
 )
 
 func Contains(s []int, e int) (int, bool) {
@@ -199,7 +202,7 @@ var (
 								Emoji: discordgo.ComponentEmoji{
 									Name: "🎲",
 								},
-								CustomID: "random_button",
+								CustomID: RandomButton,
 							},
 							discordgo.Button{
 								Label: "結果発表！",
@@ -207,7 +210,16 @@ var (
 								Emoji: discordgo.ComponentEmoji{
 									Name: "🎯",
 								},
-								CustomID: "answer_button",
+								CustomID: AnswerButton,
+							},
+						},
+					},
+					discordgo.ActionsRow{
+						Components: []discordgo.MessageComponent{
+							discordgo.Button{
+								Label:    "ゲームから離脱",
+								Style:    discordgo.SecondaryButton,
+								CustomID: "leave_button",
 							},
 						},
 					},
@@ -240,6 +252,24 @@ var (
 						Components: components,
 					},
 				})
+			case "refresh":
+				if _, ok := channelUserMap[i.ChannelID]; ok {
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Embeds:     embeds,
+							Components: components,
+						},
+					})
+				} else {
+					s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseChannelMessageWithSource,
+						Data: &discordgo.InteractionResponseData{
+							Content: "先にコマンド`/ito start`を実行してください！",
+						},
+					})
+				}
+
 			case "help":
 				content = "Ito help!"
 				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -254,7 +284,7 @@ var (
 	}
 
 	componentHandler = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"random_button": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		RandomButton: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			num := Random(NumberMax)
 			member := i.Member.User.Username
 			channelUserMap[i.ChannelID].SetUnique(member, num)
@@ -267,7 +297,7 @@ var (
 				},
 			})
 		},
-		"answer_button": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+		AnswerButton: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			embeds := []*discordgo.MessageEmbed{
 				{
 					Title:     "結果発表！",
@@ -371,6 +401,11 @@ func main() {
 			{
 				Name:        "start",
 				Description: "Itoのゲームを開始するコマンドです",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			},
+			{
+				Name:        "refresh",
+				Description: "Itoのランダム数字生成画面を再表示します",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 			{
