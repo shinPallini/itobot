@@ -280,76 +280,120 @@ var (
 						Content: content,
 					},
 				})
+			case "end":
+				content = "ゲームを終了しました！"
+				delete(channelUserMap, i.ChannelID)
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Flags:   uint64(discordgo.MessageFlagsEphemeral),
+						Content: content,
+					},
+				})
 			}
 		},
 	}
 
+	errResponse = func(authorName string) *discordgo.InteractionResponse {
+		return &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Embeds: []*discordgo.MessageEmbed{
+					{
+						Title:       "エラー: ゲーム未起動",
+						Description: "このチャンネルではItoが開始されていません。\n新しく`/ito start`を実行してゲームを開始してください！",
+						Color:       0xdc143c,
+						Timestamp:   GetNow(),
+						Footer:      footer,
+						Author: &discordgo.MessageEmbedAuthor{
+							Name:    authorName,
+							URL:     "https://twitter.com/shin_0205",
+							IconURL: "https://better-default-discord.netlify.app/Icons/Gradient-Green.png",
+						},
+					},
+				},
+			},
+		}
+	}
 	componentHandler = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		RandomButton: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			num := Random(NumberMax)
 			member := i.Member.User.Username
-			channelUserMap[i.ChannelID].SetUnique(member, num)
+			if channelUserMap[i.ChannelID] != nil {
+				channelUserMap[i.ChannelID].SetUnique(member, num)
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Flags:   uint64(discordgo.MessageFlagsEphemeral),
+						Content: fmt.Sprintf("あなたの数字は「**%d**」です！", channelUserMap[i.ChannelID].userNumber[member]),
+					},
+				})
+			} else {
+				s.InteractionRespond(i.Interaction, errResponse(s.State.User.Username))
+			}
 
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Flags:   uint64(discordgo.MessageFlagsEphemeral),
-					Content: fmt.Sprintf("あなたの数字は「**%d**」です！", channelUserMap[i.ChannelID].userNumber[member]),
-				},
-			})
 		},
 		AnswerButton: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			embeds := []*discordgo.MessageEmbed{
-				{
-					Title:     "結果発表！",
-					Timestamp: GetNow(),
-					Color:     0x29df3c,
-					Fields: func() []*discordgo.MessageEmbedField {
-						l := make([]*discordgo.MessageEmbedField, 0)
-						keys := make([]string, 0, len(channelUserMap[i.ChannelID].userNumber))
-						for k, _ := range channelUserMap[i.ChannelID].userNumber {
-							keys = append(keys, k)
-						}
+			if channelUserMap[i.ChannelID] != nil {
+				embeds := []*discordgo.MessageEmbed{
+					{
+						Title:     "結果発表！",
+						Timestamp: GetNow(),
+						Color:     0x29df3c,
+						Fields: func() []*discordgo.MessageEmbedField {
+							l := make([]*discordgo.MessageEmbedField, 0)
+							keys := make([]string, 0, len(channelUserMap[i.ChannelID].userNumber))
+							for k, _ := range channelUserMap[i.ChannelID].userNumber {
+								keys = append(keys, k)
+							}
 
-						sort.SliceStable(keys, func(m, n int) bool {
-							return channelUserMap[i.ChannelID].userNumber[keys[m]] > channelUserMap[i.ChannelID].userNumber[keys[n]]
-						})
-
-						for count, k := range keys {
-							l = append(l, &discordgo.MessageEmbedField{
-								Name:   fmt.Sprintf("%s位: %sさん", NumberEmojis[count+1], k),
-								Value:  strconv.Itoa(channelUserMap[i.ChannelID].userNumber[k]),
-								Inline: false,
+							sort.SliceStable(keys, func(m, n int) bool {
+								return channelUserMap[i.ChannelID].userNumber[keys[m]] > channelUserMap[i.ChannelID].userNumber[keys[n]]
 							})
-						}
 
-						return l
-					}(),
-					Footer: footer,
-					Author: &discordgo.MessageEmbedAuthor{
-						Name:    s.State.User.Username,
-						URL:     "https://twitter.com/shin_0205",
-						IconURL: "https://better-default-discord.netlify.app/Icons/Gradient-Green.png",
+							for count, k := range keys {
+								l = append(l, &discordgo.MessageEmbedField{
+									Name:   fmt.Sprintf("%s位: %sさん", NumberEmojis[count+1], k),
+									Value:  strconv.Itoa(channelUserMap[i.ChannelID].userNumber[k]),
+									Inline: false,
+								})
+							}
+
+							return l
+						}(),
+						Footer: footer,
+						Author: &discordgo.MessageEmbedAuthor{
+							Name:    s.State.User.Username,
+							URL:     "https://twitter.com/shin_0205",
+							IconURL: "https://better-default-discord.netlify.app/Icons/Gradient-Green.png",
+						},
 					},
-				},
+				}
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Embeds: embeds,
+					},
+				})
+			} else {
+				s.InteractionRespond(i.Interaction, errResponse(s.State.User.Username))
 			}
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Embeds: embeds,
-				},
-			})
+
 		},
 		LeaveButton: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			member := i.Member.User.Username
-			delete(channelUserMap[i.ChannelID].userNumber, member)
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Flags:   uint64(discordgo.MessageFlagsEphemeral),
-					Content: fmt.Sprint("ゲームから退出しました！"),
-				},
-			})
+			if channelUserMap[i.ChannelID] != nil {
+				member := i.Member.User.Username
+				delete(channelUserMap[i.ChannelID].userNumber, member)
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Flags:   uint64(discordgo.MessageFlagsEphemeral),
+						Content: fmt.Sprint("ゲームから退出しました！"),
+					},
+				})
+			} else {
+				s.InteractionRespond(i.Interaction, errResponse(s.State.User.Username))
+			}
 		},
 	}
 )
@@ -423,6 +467,11 @@ func main() {
 			{
 				Name:        "help",
 				Description: "Ito Botの操作方法を確認するコマンドです",
+				Type:        discordgo.ApplicationCommandOptionSubCommand,
+			},
+			{
+				Name:        "end",
+				Description: "Itoのゲームを終了するコマンドです",
 				Type:        discordgo.ApplicationCommandOptionSubCommand,
 			},
 		},
