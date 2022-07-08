@@ -20,6 +20,7 @@ const (
 
 	RandomButton = "random_button"
 	AnswerButton = "answer_button"
+	LeaveButton  = "leave_button"
 )
 
 func Contains(s []int, e int) (int, bool) {
@@ -219,7 +220,7 @@ var (
 							discordgo.Button{
 								Label:    "ゲームから離脱",
 								Style:    discordgo.SecondaryButton,
-								CustomID: "leave_button",
+								CustomID: LeaveButton,
 							},
 						},
 					},
@@ -336,6 +337,17 @@ var (
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Embeds: embeds,
+				},
+			})
+		},
+		LeaveButton: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			member := i.Member.User.Username
+			delete(channelUserMap[i.ChannelID].userNumber, member)
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Flags:   uint64(discordgo.MessageFlagsEphemeral),
+					Content: fmt.Sprint("ゲームから退出しました！"),
 				},
 			})
 		},
